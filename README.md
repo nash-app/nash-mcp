@@ -97,7 +97,15 @@ Detailed timestamped logs of all operations and tool executions are emitted by t
 
 ### Testing
 
-Coming Soon
+```bash
+poetry run pytest
+```
+
+With coverage
+
+```bash
+poetry run pytest --cov=nash_mcp
+```
 
 ## License
 

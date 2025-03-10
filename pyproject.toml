@@ -39,6 +39,7 @@ nash = "nash_mcp.server:main"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
+pytest-cov = "^6.0.0"
 
 [tool.black]
 line-length = 120
