@@ -1,9 +1,7 @@
-import os
 import sys
 import logging
 import traceback
 from datetime import datetime
-from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
@@ -24,7 +22,6 @@ from nash_mcp.nash_tasks import (
     save_nash_task, list_nash_tasks, run_nash_task, delete_nash_task,
     execute_task_script, view_task_details
 )
-
 
 
 def setup_logging():
@@ -60,7 +57,7 @@ try:
     setup_logging()
 
     logging.info(f"Starting Nash MCP server with session ID: {NASH_SESSION_ID}")
-    
+
     # Create session directory
     NASH_SESSION_DIR.mkdir(parents=True, exist_ok=True)
     logging.info(f"Created session directory: {NASH_SESSION_DIR}")
@@ -92,7 +89,6 @@ try:
     mcp.add_tool(delete_nash_task)
     mcp.add_tool(execute_task_script)
     mcp.add_tool(view_task_details)
-
 
     # Start the server
     logging.info("All tools registered, starting MCP server")
