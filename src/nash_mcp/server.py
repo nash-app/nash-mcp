@@ -25,8 +25,6 @@ from nash_mcp.nash_tasks import (
     execute_task_script, view_task_details
 )
 
-# Help
-from nash_mcp.nash_help import nash_help
 
 
 def setup_logging():
@@ -95,8 +93,6 @@ try:
     mcp.add_tool(execute_task_script)
     mcp.add_tool(view_task_details)
 
-    # Help
-    mcp.add_tool(nash_help)
 
     # Start the server
     logging.info("All tools registered, starting MCP server")

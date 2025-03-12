@@ -2,14 +2,9 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
 import traceback
 import logging
-import glob
-import re
-from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple, Union
 
 from nash_mcp.constants import MAC_SECRETS_PATH, NASH_SESSION_DIR
 
