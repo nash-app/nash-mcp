@@ -191,6 +191,13 @@ def edit_python_file(file_name: str, old_content: str, new_content: str) -> str:
         "import requests\nimport json\nimport logging"
     )
     
+    # Adding error handling to a function (NOTICE INDENTATION IS PRESERVED)
+    edit_python_file(
+        "fetch_data.py",
+        "def fetch_user_data(user_id):\n    url = f\"https://api.example.com/users/{user_id}\"\n    response = requests.get(url)\n    response.raise_for_status()\n    return response.json()",
+        "def fetch_user_data(user_id):\n    url = f\"https://api.example.com/users/{user_id}\"\n    try:\n        response = requests.get(url)\n        response.raise_for_status()\n        return response.json()\n    except requests.RequestException as e:\n        logging.error(f\"Failed to fetch user data: {e}\")\n        return None"
+    )
+    
     # Major change: Replace an entire function with a completely new implementation
     edit_python_file(
         "processor.py",
@@ -222,9 +229,18 @@ def edit_python_file(file_name: str, old_content: str, new_content: str) -> str:
     - Make focused, targeted changes rather than multiple changes at once
     - When a user asks to "fix", "update", "modify", or "change" something, they typically want edits to existing files
     
+    INDENTATION GUIDELINES (CRITICAL FOR PYTHON):
+    - Always preserve correct indentation in both old_content and new_content
+    - When adding control structures (if/else, try/except, loops), replace the entire block
+    - Never try to insert just the opening part of a control structure without its closing part
+    - For adding error handling, replace the entire function or block, not just parts of it
+    - Watch for common indentation errors, especially with nested structures
+    - When debugging indentation issues, view the entire file first with get_file_content()
+    - For complex control flow changes, prefer replacing larger blocks to ensure consistency
+    
     PATTERN RECOGNITION:
     - When a user asks to "fix", "update", "modify", or "change" something, they typically want edits to existing files
-    - Use get_file_with_line_numbers() first to check if relevant files already exist
+    - Use list_session_files() and get_file_content() first to check what files already exist
     - Only create new files when the user explicitly requests a completely new utility
     
     SAFETY FEATURES:
