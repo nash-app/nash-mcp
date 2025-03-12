@@ -22,6 +22,10 @@ def fetch_webpage(url: str) -> str:
     1. Call fetch_webpage with a complete URL (including https://)
     2. Process the returned text directly or with execute_python()
     3. For complex HTML parsing needs, use execute_python() with BeautifulSoup after this
+    
+    NOTE: For sites that load content dynamically with JavaScript after initial page load,
+    or for interactive websites requiring form filling, button clicking, or navigation,
+    use the operate_webpage tool instead, which provides full browser automation capabilities.
 
     IMPLEMENTATION DETAILS:
     - Uses requests library to fetch the webpage

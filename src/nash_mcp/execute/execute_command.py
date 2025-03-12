@@ -1,6 +1,34 @@
 import subprocess
 import traceback
 import logging
+import os
+import signal
+import sys
+import atexit
+
+# Store active subprocesses
+active_processes = []
+
+# Cleanup function
+def cleanup_subprocesses():
+    for proc in active_processes:
+        try:
+            if proc.poll() is None:  # If process is still running
+                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+        except Exception:
+            pass
+
+# Register cleanup on exit
+atexit.register(cleanup_subprocesses)
+
+# For signal handling
+def signal_handler(sig, frame):
+    cleanup_subprocesses()
+    sys.exit(0)
+
+# Register signal handlers
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 
 def execute_command(cmd: str) -> str:
@@ -81,18 +109,33 @@ def execute_command(cmd: str) -> str:
     
     try:
         # Always use shell=True for simplicity and tilde expansion
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
-                               text=True, shell=True)
+        # Use preexec_fn=os.setpgrp to make this process the group leader
+        proc = subprocess.Popen(
+            cmd, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE,
+            text=True, 
+            shell=True,
+            preexec_fn=os.setpgrp  # Make this process the group leader
+        )
         
-        stdout, stderr = proc.communicate()
-        if proc.returncode == 0:
-            logging.info(f"Command executed successfully (exit code 0)")
-            return stdout if stdout.strip() else "Command executed (no output)."
-        else:
-            logging.warning(f"Command failed with exit code {proc.returncode}: {safe_cmd}")
-            logging.debug(f"Command stderr: {stderr}")
-            return (f"Command failed (exit code {proc.returncode}).\n"
-                    f"STDOUT:\n{stdout}\nSTDERR:\n{stderr}")
+        # Add to active processes list for cleanup
+        active_processes.append(proc)
+        
+        try:
+            stdout, stderr = proc.communicate()
+            if proc.returncode == 0:
+                logging.info(f"Command executed successfully (exit code 0)")
+                return stdout if stdout.strip() else "Command executed (no output)."
+            else:
+                logging.warning(f"Command failed with exit code {proc.returncode}: {safe_cmd}")
+                logging.debug(f"Command stderr: {stderr}")
+                return (f"Command failed (exit code {proc.returncode}).\n"
+                        f"STDOUT:\n{stdout}\nSTDERR:\n{stderr}")
+        finally:
+            # Remove from active processes list
+            if proc in active_processes:
+                active_processes.remove(proc)
     except Exception as e:
         logging.error(f"Exception while executing command: {str(e)}")
         logging.error(traceback.format_exc())

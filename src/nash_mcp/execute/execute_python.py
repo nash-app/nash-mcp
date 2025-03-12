@@ -4,7 +4,33 @@ import subprocess
 import sys
 import traceback
 import logging
+import signal
+import atexit
 from datetime import datetime
+
+# Store active subprocesses
+active_python_processes = []
+
+# Cleanup function
+def cleanup_python_subprocesses():
+    for proc in active_python_processes:
+        try:
+            if proc.poll() is None:  # If process is still running
+                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+        except Exception:
+            pass
+
+# Register cleanup on exit
+atexit.register(cleanup_python_subprocesses)
+
+# For signal handling
+def python_signal_handler(sig, frame):
+    cleanup_python_subprocesses()
+    sys.exit(0)
+
+# Register signal handlers
+signal.signal(signal.SIGINT, python_signal_handler)
+signal.signal(signal.SIGTERM, python_signal_handler)
 
 from nash_mcp.constants import MAC_SECRETS_PATH, NASH_SESSION_DIR
 
@@ -417,18 +443,25 @@ def execute_python(code: str, file_name: str) -> str:
     - All secrets are passed as environment variables to the subprocess
     - All stdout output is captured and returned
 
+    WEB AUTOMATION NOTE:
+    For interactive web automation, browser-based scraping of dynamic sites, 
+    or any tasks requiring browser interactions (clicking, form filling, etc.),
+    use the operate_webpage tool instead of writing custom automation code.
+    
     SECURITY CONSIDERATIONS:
     - Never write code that could harm the user's system
     - Avoid creating persistent files; use tempfile module when needed
     - Don't leak or expose secret values in output
     - Avoid making unauthorized network requests
     - Do not attempt to bypass system security controls
+    - When scraping websites, respect robots.txt and rate limits
 
     BEST PRACTICES:
     - Keep Python code focused on data retrieval, computation, and transformations
     - Write minimal code that extracts and formats data, letting the LLM analyze the results
     - Avoid embedding complex analysis logic in Python when the LLM can do it better
     - Return clean, structured data that the LLM can easily interpret
+    - For static web content, use fetch_webpage; for dynamic sites or interactive features, use operate_webpage
     
     Args:
         code: Python code to execute (multi-line string)
@@ -482,12 +515,30 @@ def execute_python(code: str, file_name: str) -> str:
             # Execute the file using the same Python interpreter
             logging.info(f"Running Python code from: {file_path}")
             try:
-                result = subprocess.run(
+                proc = subprocess.Popen(
                     [sys.executable, str(file_path)],
-                    capture_output=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
                     text=True,
-                    env=env_vars
+                    env=env_vars,
+                    preexec_fn=os.setpgrp  # Make this process the group leader
                 )
+                
+                # Add to active processes list for cleanup
+                active_python_processes.append(proc)
+                
+                try:
+                    stdout, stderr = proc.communicate()
+                    result = subprocess.CompletedProcess(
+                        [sys.executable, str(file_path)],
+                        proc.returncode,
+                        stdout,
+                        stderr
+                    )
+                finally:
+                    # Remove from active processes list
+                    if proc in active_python_processes:
+                        active_python_processes.remove(proc)
                 
                 # Return stdout if successful, or stderr if there was an error
                 if result.returncode == 0:
