@@ -446,7 +446,7 @@ def execute_python(code: str, file_name: str) -> str:
     WEB AUTOMATION NOTE:
     For interactive web automation, browser-based scraping of dynamic sites, 
     or any tasks requiring browser interactions (clicking, form filling, etc.),
-    use the operate_webpage tool instead of writing custom automation code.
+    use the operate_browser tool instead of writing custom automation code.
     
     SECURITY CONSIDERATIONS:
     - Never write code that could harm the user's system
@@ -461,7 +461,7 @@ def execute_python(code: str, file_name: str) -> str:
     - Write minimal code that extracts and formats data, letting the LLM analyze the results
     - Avoid embedding complex analysis logic in Python when the LLM can do it better
     - Return clean, structured data that the LLM can easily interpret
-    - For static web content, use fetch_webpage; for dynamic sites or interactive features, use operate_webpage
+    - For static web content, use fetch_webpage; for dynamic sites or interactive features, use operate_browser
     
     Args:
         code: Python code to execute (multi-line string)

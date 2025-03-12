@@ -25,7 +25,7 @@ def fetch_webpage(url: str) -> str:
     
     NOTE: For sites that load content dynamically with JavaScript after initial page load,
     or for interactive websites requiring form filling, button clicking, or navigation,
-    use the operate_webpage tool instead, which provides full browser automation capabilities.
+    use the operate_browser tool instead, which provides full browser automation capabilities.
 
     IMPLEMENTATION DETAILS:
     - Uses requests library to fetch the webpage

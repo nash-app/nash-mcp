@@ -15,7 +15,7 @@ from nash_mcp.execute import execute_command, execute_python, list_installed_pac
 from nash_mcp.fetch_webpage import fetch_webpage
 
 # Web Automation
-from nash_mcp.operate_webpage import operate_webpage
+from nash_mcp.operate_browser import operate_browser
 
 # Secrets
 from nash_mcp.nash_secrets import nash_secrets
@@ -83,7 +83,7 @@ try:
     mcp.add_tool(fetch_webpage)
     
     # Web Automation
-    mcp.add_tool(operate_webpage)
+    mcp.add_tool(operate_browser)
 
     # Secrets
     mcp.add_tool(nash_secrets)
