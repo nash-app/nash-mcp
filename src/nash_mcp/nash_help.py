@@ -14,10 +14,16 @@ def nash_help() -> str:
          Returns: Command output or detailed error information
     
     2. PYTHON EXECUTION
-       - execute_python(code: str) -> str: Execute arbitrary Python code
-         Example: execute_python("import os; print(os.getcwd())")
+       - execute_python(code: str, file_name: str) -> str: Execute Python code
+         Example: execute_python("import os; print(os.getcwd())", "system_info.py")
          Returns: Captured stdout or detailed error message
-         Note: Creates temporary files that are cleaned up afterward
+         Note: Saves code to the session directory with the provided name
+       - get_file_with_line_numbers(file_name: str) -> str: View file with line numbers
+         Example: get_file_with_line_numbers("data_analysis.py")
+         Returns: File contents with line numbers for easy reference
+       - edit_python_file(file_name: str, edits: list) -> str: Make targeted edits to a file
+         Example: edit_python_file("data_analysis.py", [{"operation": "replace", "line_start": 10, "content": "new_code"}])
+         Returns: Detailed diff of changes made
        - list_installed_packages() -> str: Returns Python version and all installed packages
          Always check available packages before importing libraries
     
@@ -168,8 +174,63 @@ def nash_help() -> str:
     
     - All tools implement consistent error handling, returning user-friendly error messages
     - Task and secret data are stored persistently between sessions
-    - execute_python creates temporary Python files that are automatically cleaned up
+    - execute_python saves code to named files in the session directory for reuse
+    - Session-based storage enables viewing, editing, and running previous code
     - execute_command uses shell=True for command execution (use proper escaping)
+    
+    CODE EDITING WORKFLOW:
+    
+    IMPORTANT: ALWAYS PRIORITIZE EDITING EXISTING FILES RATHER THAN CREATING NEW ONES!
+    
+    Standard Workflow:
+    
+    1. FIRST, check if relevant files already exist:
+       ```python
+       get_file_content("data_analysis.py")
+       ```
+    
+    2. If the file exists, make edits instead of creating a new one:
+       ```python
+       edit_python_file(
+           "data_analysis.py",
+           "df = pd.read_csv('data.csv')\nprint(df.head())",
+           "df = pd.read_csv('data.csv', index_col=0)\ndf = df.dropna()\nprint(df.head())"
+       )
+       ```
+    
+    3. Run the modified code without changing it:
+       ```python
+       execute_python("", "data_analysis.py")
+       ```
+    
+    4. Only create new files for entirely new utilities:
+       ```python
+       execute_python("import pandas as pd\n\ndef analyze_sales():\n    df = pd.read_csv('sales.csv')\n    return df.groupby('region').sum()", "sales_analyzer.py")
+       ```
+       
+    WHEN TO EDIT vs. CREATE NEW:
+    
+    EDIT when (almost always):
+    - Making any modification to existing functionality
+    - Fixing bugs or issues in existing code
+    - Adding new functions or classes to existing modules
+    - Changing logic, algorithms, or implementations
+    - Adjusting parameters or configuration values
+    - Updating imports or dependencies
+    - Improving error handling or adding validation
+    - Enhancing existing features in any way
+    - Refactoring or restructuring code
+    - Even for major changes that affect large portions of the file
+    
+    CREATE NEW only when:
+    - Creating a completely separate utility with an entirely different purpose
+    - Explicitly asked by the user to create a new standalone file
+    - Testing isolated functionality that shouldn't affect existing code
+    - The existing file is explicitly described as a template or example
+    
+    IMPORTANT: When the user asks to "fix", "update", "modify", or "change" something,
+    they typically want edits to existing files, not brand new files. Always check if
+    relevant files already exist before creating a new one.
     
     For more detailed information about specific tools, examine their individual docstrings.
     

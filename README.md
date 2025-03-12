@@ -28,7 +28,9 @@ poetry install
 ### Execute Module
 
 - **execute_command**: Run shell commands with proper error handling and output capture
-- **execute_python**: Execute Python code snippets with full access to installed packages
+- **execute_python**: Execute Python code snippets with full access to installed packages, saved to persistent files in the session directory
+- **get_file_content**: Retrieve file contents for reviewing and editing existing code
+- **edit_python_file**: Make targeted edits to existing Python files using exact string pattern matching
 - **list_installed_packages**: Get information about available Python packages
 
 ### Web Interaction
@@ -78,9 +80,38 @@ Nash MCP requires environment variables to specify all data file paths. Create a
 NASH_SECRETS_PATH=/path/to/secrets.json
 NASH_TASKS_PATH=/path/to/tasks.json
 NASH_LOGS_PATH=/path/to/logs/directory
+NASH_SESSIONS_PATH=/path/to/sessions/directory
 ```
 
 There are no default values - all paths must be explicitly configured.
+
+### Session Management
+
+The Nash MCP server creates a unique session directory for each server instance. This session directory stores:
+
+- Python scripts executed during the session
+- Backup files of edited scripts
+- Error logs and exception information
+
+This persistent storage enables powerful workflows:
+
+1. Scripts are saved with descriptive names for easy reference
+2. Previous scripts can be viewed and modified instead of rewritten
+3. Errors are captured in companion files for debugging
+
+### File Editing Best Practices
+
+When working with Nash MCP, prioritize editing existing files rather than creating new ones:
+
+1. **Always check for existing files** before creating new ones using `get_file_content()`
+2. **Use pattern-based editing** with `edit_python_file()` for making changes to existing code
+3. **Only create new files** when implementing entirely new functionality or when explicitly requested
+
+This approach preserves script history, maintains context, and makes incremental development more efficient. The editing workflow follows this pattern:
+
+1. Check if a file exists → `get_file_content("file_name.py")`
+2. Make changes to existing file → `edit_python_file("file_name.py", old_content, new_content)`
+3. Run the modified file → `execute_python("", "file_name.py")` (empty code string to run without modifying)
 
 ## Security Considerations
 

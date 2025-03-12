@@ -6,18 +6,258 @@ import tempfile
 import traceback
 import logging
 import glob
+import re
 from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Union
 
 from nash_mcp.constants import MAC_SECRETS_PATH, NASH_SESSION_DIR
+
+
+def get_file_content(file_name: str) -> str:
+    """
+    Retrieve the contents of a Python file from the session directory.
+    
+    This function reads a file from the current session directory and returns its
+    contents. This is essential for viewing the current state of a file before
+    making edits with edit_python_file().
+    
+    USE CASES:
+    - Before making edits to an existing file
+    - When checking the current implementation of a script
+    - To understand the structure of a previously saved script
+    - For reviewing code to identify parts that need modification
+    
+    EXAMPLES:
+    ```python
+    # View a file named "data_analysis.py"
+    get_file_content("data_analysis.py")
+    
+    # View a file without .py extension (extension will be added automatically)
+    get_file_content("data_analysis")
+    ```
+    
+    WORKFLOW:
+    1. Use get_file_content() to check if a file exists and view its current content
+    2. Identify the exact content you want to modify
+    3. Use edit_python_file() to make targeted changes by replacing specific content
+    4. Use execute_python() with an empty code string to run the modified file
+    
+    Args:
+        file_name: The name of the file to read from the session directory
+        
+    Returns:
+        The file contents as a string, or an error message if the file doesn't exist
+    """
+    try:
+        # Ensure file has .py extension
+        if not file_name.endswith('.py'):
+            file_name = f"{file_name}.py"
+            
+        file_path = NASH_SESSION_DIR / file_name
+        
+        if not file_path.exists():
+            return f"Error: File '{file_name}' not found in the current session."
+            
+        with open(file_path, 'r') as f:
+            content = f.read()
+            
+        return content
+    except Exception as e:
+        logging.error(f"Error reading file '{file_name}': {str(e)}")
+        return f"Error reading file: {str(e)}"
+
+
+def edit_python_file(file_name: str, old_content: str, new_content: str) -> str:
+    """
+    Edit a Python file by replacing specific content with new content.
+    
+    ALWAYS PRIORITIZE EDITING EXISTING FILES RATHER THAN CREATING NEW ONES WHEN MAKING CHANGES.
+    This should be your first choice whenever modifying existing code - even for seemingly significant changes.
+    
+    This function uses exact string matching to find and replace code snippets,
+    similar to how Claude edits files. This approach is more reliable for complex
+    changes and matches how LLMs naturally think about editing text.
+    
+    USE CASES:
+    - Fix bugs or errors in existing code
+    - Refactor code to improve readability or maintainability
+    - Add new features to an existing script
+    - Update variable names, function signatures, or other identifiers
+    - Replace entire blocks of code with improved implementations
+    - Change algorithm implementations or logic flows
+    - Modify large portions of files (you can replace almost the entire content if needed)
+    
+    ADVANTAGES:
+    - Uses exact pattern matching, similar to how Claude handles edits
+    - Avoids problems with line numbers shifting during edits
+    - Can replace multi-line content with precise context
+    - More reliable for complex edits than line-based approaches
+    - Preserves script history and context
+    
+    WHEN TO EDIT vs. CREATE NEW:
+    
+    EDIT when (almost always):
+    - Making any modification to existing functionality
+    - Fixing bugs or issues in existing code
+    - Adding new functions or classes to existing modules
+    - Changing logic, algorithms, or implementations
+    - Adjusting parameters or configuration values
+    - Updating imports or dependencies
+    - Improving error handling or adding validation
+    - Enhancing existing features in any way
+    - Refactoring or restructuring code
+    - Even for major changes that affect large portions of the file
+    
+    CREATE NEW only when:
+    - Creating a completely separate utility with an entirely different purpose
+    - Explicitly asked by the user to create a new standalone file
+    - Testing isolated functionality that shouldn't affect existing code
+    - The existing file is explicitly described as a template or example
+    
+    EXAMPLES:
+    ```python
+    # Fix a calculation by replacing the specific function
+    edit_python_file(
+        "data_analysis.py",
+        "def calculate_average(values):\n    return sum(values) / len(values)",
+        "def calculate_average(values):\n    return np.mean(values)  # Using numpy for better handling of edge cases"
+    )
+    
+    # Fix a bug by replacing a specific line with its surrounding context
+    edit_python_file(
+        "processor.py",
+        "    data = load_data()\n    result = process(data)\n    save_results(data)  # Bug: saving wrong data",
+        "    data = load_data()\n    result = process(data)\n    save_results(result)  # Fixed: save processed results"
+    )
+    
+    # Add a new import statement
+    edit_python_file(
+        "api_client.py", 
+        "import requests\nimport json", 
+        "import requests\nimport json\nimport logging"
+    )
+    
+    # Major change: Replace an entire function with a completely new implementation
+    edit_python_file(
+        "processor.py",
+        "def process_data(data):\n    # Old inefficient implementation\n    result = []\n    for item in data:\n        if item['value'] > 0:\n            result.append(item['value'] * 2)\n    return result",
+        "def process_data(data):\n    # New vectorized implementation\n    import pandas as pd\n    df = pd.DataFrame(data)\n    return df[df['value'] > 0]['value'] * 2"
+    )
+    
+    # Even major changes that add multiple functions should use edit_python_file
+    edit_python_file(
+        "utils.py",
+        "# Utility functions for data processing",
+        "# Utility functions for data processing\n\ndef validate_input(data):\n    \"\"\"Validate input data format.\"\"\"\n    if not isinstance(data, list):\n        raise TypeError(\"Data must be a list\")\n    return True\n\ndef normalize_data(data):\n    \"\"\"Normalize values to 0-1 range.\"\"\"\n    min_val = min(data)\n    max_val = max(data)\n    return [(x - min_val) / (max_val - min_val) for x in data]"
+    )
+    ```
+    
+    WORKFLOW:
+    1. Always check if a relevant file already exists with get_file_content()
+    2. When modifying any existing file, use edit_python_file()
+    3. Identify the exact content to replace (including enough context)
+    4. Create the new replacement content
+    5. Apply the change with edit_python_file()
+    6. Use execute_python() to run the modified file
+    7. Only create new files when specifically creating a new utility
+    
+    BEST PRACTICES:
+    - Include sufficient context around the text to be replaced (3-5 lines before and after)
+    - For major rewrites, you can replace large chunks of the file or even nearly all content
+    - Ensure the old_content exactly matches text in the file, including spacing and indentation
+    - Make focused, targeted changes rather than multiple changes at once
+    - When a user asks to "fix", "update", "modify", or "change" something, they typically want edits to existing files
+    
+    PATTERN RECOGNITION:
+    - When a user asks to "fix", "update", "modify", or "change" something, they typically want edits to existing files
+    - Use get_file_with_line_numbers() first to check if relevant files already exist
+    - Only create new files when the user explicitly requests a completely new utility
+    
+    SAFETY FEATURES:
+    - Creates a backup of the original file (.py.bak extension)
+    - Returns a diff of changes made
+    - Will only replace exact matches, preventing unintended changes
+    
+    Args:
+        file_name: The name of the file to edit in the session directory
+        old_content: The exact content to replace (must match exactly, including whitespace)
+        new_content: The new content to insert as a replacement
+        
+    Returns:
+        Success message with diff of changes, or error message if the operation fails
+    """
+    try:
+        # Ensure file has .py extension
+        if not file_name.endswith('.py'):
+            file_name = f"{file_name}.py"
+            
+        file_path = NASH_SESSION_DIR / file_name
+        
+        if not file_path.exists():
+            return f"Error: File '{file_name}' not found in the current session."
+        
+        # Read the original file
+        with open(file_path, 'r') as f:
+            content = f.read()
+            
+        # Check if the old content exists in the file
+        if old_content not in content:
+            return f"Error: The specified content was not found in '{file_name}'. Please check that the content matches exactly, including whitespace and indentation."
+            
+        # Create a backup of the original file
+        backup_path = file_path.with_suffix('.py.bak')
+        with open(backup_path, 'w') as f:
+            f.write(content)
+            
+        # Replace the content
+        new_file_content = content.replace(old_content, new_content)
+        
+        # Write the modified content back to the file
+        with open(file_path, 'w') as f:
+            f.write(new_file_content)
+            
+        # Generate a unified diff for the changes
+        from difflib import unified_diff
+        
+        old_lines = content.splitlines()
+        new_lines = new_file_content.splitlines()
+        
+        diff = list(unified_diff(
+            old_lines, 
+            new_lines,
+            fromfile=f"{file_name} (original)",
+            tofile=f"{file_name} (modified)",
+            lineterm='',
+            n=3  # Context lines
+        ))
+        
+        if diff:
+            diff_result = '\n'.join(diff)
+        else:
+            diff_result = "No changes detected."
+            
+        return f"Successfully edited '{file_name}'.\n\nChanges:\n{diff_result}"
+        
+    except Exception as e:
+        logging.error(f"Error editing file '{file_name}': {str(e)}")
+        logging.error(traceback.format_exc())
+        return f"Error editing file: {str(e)}"
 
 
 def execute_python(code: str, file_name: str) -> str:
     """Execute arbitrary Python code and return the result.
 
+    WARNING: If you're providing a filename that may already exist, you are potentially
+    OVERWRITING an existing file. ALWAYS use get_file_content() first to check
+    if the file exists, and prefer edit_python_file() for modifying existing files.
+    
     This function executes standard Python code with access to imported modules and packages.
     The code is saved to a named file in the session directory and executed in a subprocess 
     using the same Python interpreter. All available secrets are automatically loaded as 
     environment variables.
+    
+    If you provide an empty code string and the file already exists, it will execute the 
+    existing file without overwriting it. This is useful for running previously edited files.
     
     USAGE GUIDE:
     1. Use list_installed_packages() first to check available packages
@@ -127,10 +367,14 @@ def execute_python(code: str, file_name: str) -> str:
         # Create the full file path in the session directory
         file_path = NASH_SESSION_DIR / file_name
         
-        # Write the code to the file
-        with open(file_path, 'w') as f:
-            f.write(code)
-        logging.info(f"Saved Python code to: {file_path}")
+        # If code is empty and file exists, use existing file
+        if not code and file_path.exists():
+            logging.info(f"Using existing file: {file_path}")
+        else:
+            # Write the code to the file
+            with open(file_path, 'w') as f:
+                f.write(code)
+            logging.info(f"Saved Python code to: {file_path}")
 
         try:
             # Execute the file using the same Python interpreter
