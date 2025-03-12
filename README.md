@@ -75,7 +75,6 @@ Nash MCP requires environment variables to specify all data file paths. Create a
 
 ```
 # Required environment variables
-NASH_BASE_PATH=/path/to/base/directory
 NASH_SECRETS_PATH=/path/to/secrets.json
 NASH_TASKS_PATH=/path/to/tasks.json
 NASH_LOGS_PATH=/path/to/logs/directory

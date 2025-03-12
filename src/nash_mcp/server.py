@@ -8,7 +8,7 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
 # Nash imports
-from nash_mcp.constants import MAC_LOGS_PATH
+from nash_mcp.constants import MAC_LOGS_PATH, NASH_SESSION_DIR, NASH_SESSION_ID
 
 # Execute
 from nash_mcp.execute import execute_command, execute_python, list_installed_packages
@@ -61,7 +61,11 @@ try:
     # Set up logging
     setup_logging()
 
-    logging.info("Starting Nash MCP server")
+    logging.info(f"Starting Nash MCP server with session ID: {NASH_SESSION_ID}")
+    
+    # Create session directory
+    NASH_SESSION_DIR.mkdir(parents=True, exist_ok=True)
+    logging.info(f"Created session directory: {NASH_SESSION_DIR}")
 
     # Create MCP instance
     mcp = FastMCP("Nash")
