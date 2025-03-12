@@ -11,7 +11,7 @@ from mcp.server.fastmcp import FastMCP
 from nash_mcp.constants import MAC_LOGS_PATH, NASH_SESSION_DIR, NASH_SESSION_ID
 
 # Execute
-from nash_mcp.execute import execute_command, execute_python, list_installed_packages, get_file_content, edit_python_file
+from nash_mcp.execute import execute_command, execute_python, list_installed_packages, get_file_content, edit_python_file, list_session_files
 
 # Fetch
 from nash_mcp.fetch_webpage import fetch_webpage
@@ -76,6 +76,7 @@ try:
     # Execute
     mcp.add_tool(execute_command)
     mcp.add_tool(execute_python)
+    mcp.add_tool(list_session_files)
     mcp.add_tool(get_file_content)
     mcp.add_tool(edit_python_file)
     mcp.add_tool(list_installed_packages)

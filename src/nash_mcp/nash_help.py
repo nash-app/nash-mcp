@@ -2,6 +2,26 @@ def nash_help() -> str:
     """
     Nash MCP User Guide: A Complete Reference
 
+    ------------------------------------------------------------------------------
+    ⚠️ CRITICAL FIRST STEPS FOR ANY TASK - MANDATORY WORKFLOW ⚠️
+    
+    ALWAYS begin by discovering available resources before writing ANY code:
+    
+    1. list_installed_packages() - Know what libraries you can use
+    2. nash_secrets() - Check available credentials and API keys
+    3. list_session_files() - See what code already exists
+    4. get_file_content() - Review relevant existing code
+    
+    THEN:
+    - For existing files: edit_python_file() - Make changes to existing code
+    - For new functionality: execute_python() - Create new files
+    
+    ALWAYS edit existing files rather than creating new ones when possible.
+    NEVER write code requiring packages or credentials that aren't available.
+    
+    Skipping these steps is the #1 cause of inefficient code development.
+    ------------------------------------------------------------------------------
+    
     Nash MCP is a Model Context Protocol server that gives LLMs like Claude the ability to interact
     with your computer through Python execution and shell commands. This powerful integration enables
     AI assistants to perform tasks directly on your system.
@@ -14,16 +34,23 @@ def nash_help() -> str:
          Returns: Command output or detailed error information
     
     2. PYTHON EXECUTION
+       - list_session_files() -> str: List all Python files in the current session
+         Always use this FIRST before creating any new file
+         Returns: List of available Python files with modification times
+         
+       - get_file_content(file_name: str) -> str: View file contents
+         Example: get_file_content("data_analysis.py")
+         Returns: Complete file contents for review and editing
+         
+       - edit_python_file(file_name: str, old_content: str, new_content: str) -> str: Edit existing files
+         Example: edit_python_file("data_analysis.py", "old code to replace", "new improved code")
+         Returns: Detailed diff of changes made
+         Note: This should be your DEFAULT approach for modifying code
+         
        - execute_python(code: str, file_name: str) -> str: Execute Python code
          Example: execute_python("import os; print(os.getcwd())", "system_info.py")
          Returns: Captured stdout or detailed error message
-         Note: Saves code to the session directory with the provided name
-       - get_file_with_line_numbers(file_name: str) -> str: View file with line numbers
-         Example: get_file_with_line_numbers("data_analysis.py")
-         Returns: File contents with line numbers for easy reference
-       - edit_python_file(file_name: str, edits: list) -> str: Make targeted edits to a file
-         Example: edit_python_file("data_analysis.py", [{"operation": "replace", "line_start": 10, "content": "new_code"}])
-         Returns: Detailed diff of changes made
+         WARNING: Only use for new files after checking with list_session_files()
        - list_installed_packages() -> str: Returns Python version and all installed packages
          Always check available packages before importing libraries
     
@@ -178,55 +205,95 @@ def nash_help() -> str:
     - Session-based storage enables viewing, editing, and running previous code
     - execute_command uses shell=True for command execution (use proper escaping)
     
-    CODE EDITING WORKFLOW:
+    RECOMMENDED WORKFLOW FOR ALL CODING TASKS:
     
-    IMPORTANT: ALWAYS PRIORITIZE EDITING EXISTING FILES RATHER THAN CREATING NEW ONES!
+    ⚠️ THIS IS THE MANDATORY WORKFLOW TO FOLLOW FOR EVERY TASK ⚠️
     
-    Standard Workflow:
-    
-    1. FIRST, check if relevant files already exist:
+    1. DISCOVER AVAILABLE RESOURCES:
        ```python
+       # ALWAYS check available packages first
+       list_installed_packages()
+       
+       # ALWAYS check available secrets/API keys
+       nash_secrets()
+       
+       # ALWAYS check what files already exist
+       list_session_files()
+       ```
+    
+    2. EVALUATE EXISTING CODE:
+       ```python
+       # Review relevant files that might help with your task
        get_file_content("data_analysis.py")
        ```
     
-    2. If the file exists, make edits instead of creating a new one:
+    3. MODIFY EXISTING CODE (PREFERRED):
        ```python
+       # Make targeted changes to existing files instead of creating new ones
        edit_python_file(
            "data_analysis.py",
-           "df = pd.read_csv('data.csv')\nprint(df.head())",
-           "df = pd.read_csv('data.csv', index_col=0)\ndf = df.dropna()\nprint(df.head())"
+           "df = pd.read_csv('data.csv')\nprint(df.head())",  # Existing code to replace
+           "df = pd.read_csv('data.csv', index_col=0)\ndf = df.dropna()\nprint(df.head())"  # New improved code
        )
        ```
     
-    3. Run the modified code without changing it:
+    4. TEST AND ITERATE:
        ```python
-       execute_python("", "data_analysis.py")
+       # Run the modified file without changing its content
+       execute_python("", "data_analysis.py")  # Empty string means "run without modifying"
+       
+       # If changes are needed, use edit_python_file() again - don't create a new file!
        ```
     
-    4. Only create new files for entirely new utilities:
+    5. CHOOSE THE MOST EFFICIENT APPROACH:
+       
+       For minor to moderate changes (fewer tokens):
        ```python
+       # When targeted changes are smaller than rewriting the whole file
+       edit_python_file("data_analysis.py", "old_code", "updated_code")
+       ```
+       
+       For major changes (when more efficient):
+       ```python
+       # When it's more token-efficient to create a new file than to explain complex edits
+       # Or when replacing almost the entire content of a file
        execute_python("import pandas as pd\n\ndef analyze_sales():\n    df = pd.read_csv('sales.csv')\n    return df.groupby('region').sum()", "sales_analyzer.py")
        ```
        
+       The golden rule: MINIMIZE TOKEN USAGE
+       - Choose the approach that produces the smallest, cleanest output
+       - If edit explanations are larger than a new file, create a new file
+       - If edits are smaller than a new file, modify the existing one
+       
+    ⚠️ COMMON MISTAKES TO AVOID ⚠️
+    
+    1. Creating a new file when a small edit would be more efficient
+    2. Making complex edits when creating a new file would be more efficient
+    3. Trying to use packages that aren't installed
+    4. Writing code that requires API keys you don't have
+    5. Rewriting functionality that already exists
+    6. Not considering token efficiency in your approach
+       
     WHEN TO EDIT vs. CREATE NEW:
     
-    EDIT when (almost always):
-    - Making any modification to existing functionality
-    - Fixing bugs or issues in existing code
-    - Adding new functions or classes to existing modules
-    - Changing logic, algorithms, or implementations
-    - Adjusting parameters or configuration values
-    - Updating imports or dependencies
-    - Improving error handling or adding validation
-    - Enhancing existing features in any way
-    - Refactoring or restructuring code
-    - Even for major changes that affect large portions of the file
+    EDIT when it's more token-efficient:
+    - Making minor to moderate changes to existing code
+    - Fixing small bugs or issues in existing code
+    - Adding a few new functions to existing modules
+    - Making targeted changes to specific sections
+    - When the edit explanation is smaller than a new file
     
-    CREATE NEW only when:
-    - Creating a completely separate utility with an entirely different purpose
-    - Explicitly asked by the user to create a new standalone file
-    - Testing isolated functionality that shouldn't affect existing code
-    - The existing file is explicitly described as a template or example
+    CREATE NEW when it's more token-efficient:
+    - When changes would require replacing most of the file
+    - When explaining the edits would take more tokens than a new file
+    - When creating a completely separate utility with a different purpose
+    - When explicitly asked by the user to create a new standalone file
+    - When the edit would be complex and hard to explain
+    
+    ALWAYS consider which approach will result in:
+    1. The smallest token usage
+    2. The clearest explanation
+    3. The most maintainable code
     
     IMPORTANT: When the user asks to "fix", "update", "modify", or "change" something,
     they typically want edits to existing files, not brand new files. Always check if

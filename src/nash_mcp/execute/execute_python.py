@@ -8,9 +8,68 @@ import logging
 import glob
 import re
 from pathlib import Path
+from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Union
 
 from nash_mcp.constants import MAC_SECRETS_PATH, NASH_SESSION_DIR
+
+
+def list_session_files() -> str:
+    """
+    List all Python files in the current session directory.
+    
+    This function is essential to check what files already exist before creating new ones.
+    ALWAYS use this function before creating a new file to avoid duplicating functionality.
+    
+    USE CASES:
+    - Before creating a new file to check if something similar already exists
+    - When starting work on a new task to understand available resources
+    - To discover relevant code that could be modified instead of rewritten
+    - When fixing errors to find the file that needs editing
+    
+    EXAMPLES:
+    ```python
+    # List all existing Python files in the session
+    list_session_files()
+    
+    # After seeing available files, check content of a specific file
+    get_file_content("data_processor.py")
+    ```
+    
+    WORKFLOW:
+    1. ALWAYS start by listing available files with list_session_files()
+    2. Check content of relevant files with get_file_content()
+    3. Edit existing files with edit_python_file() instead of creating new ones
+    4. Only create new files for entirely new functionality
+    
+    Returns:
+        A formatted list of Python files in the current session directory
+    """
+    try:
+        # Ensure session directory exists
+        if not NASH_SESSION_DIR.exists():
+            return "No session directory found."
+            
+        # Find all Python files in the session directory
+        py_files = list(NASH_SESSION_DIR.glob("*.py"))
+        
+        if not py_files:
+            return "No Python files found in the current session."
+            
+        # Sort files by modification time (newest first)
+        py_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+        
+        # Format output
+        result = "Python files in current session:\n\n"
+        for file_path in py_files:
+            mod_time = datetime.fromtimestamp(file_path.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+            result += f"- {file_path.name} (Modified: {mod_time})\n"
+            
+        result += "\nTo view file content: get_file_content(\"filename.py\")"
+        return result
+    except Exception as e:
+        logging.error(f"Error listing session files: {str(e)}")
+        return f"Error listing files: {str(e)}"
 
 
 def get_file_content(file_name: str) -> str:
@@ -247,9 +306,41 @@ def edit_python_file(file_name: str, old_content: str, new_content: str) -> str:
 def execute_python(code: str, file_name: str) -> str:
     """Execute arbitrary Python code and return the result.
 
-    WARNING: If you're providing a filename that may already exist, you are potentially
-    OVERWRITING an existing file. ALWAYS use get_file_content() first to check
-    if the file exists, and prefer edit_python_file() for modifying existing files.
+    ⚠️ MANDATORY PRE-CODING CHECKLIST - COMPLETE BEFORE WRITING ANY CODE: ⚠️
+    
+    STOP! Before writing or executing ANY code, have you completed these REQUIRED checks?
+    
+    1. Check available packages: list_installed_packages()
+       - Know what libraries you can use
+       - Avoid importing unavailable packages
+       
+    2. Check available secrets: nash_secrets()
+       - See what API keys and credentials are available
+       - Don't write code requiring credentials you don't have
+       
+    3. Check existing files: list_session_files()
+       - See what code already exists
+       - Avoid duplicating existing functionality
+       
+    4. Review relevant file contents: get_file_content("filename.py")
+       - Understand existing implementations
+       - Decide whether to edit or create new
+    
+    These steps are MANDATORY. Skipping them is the #1 cause of inefficient code development.
+    
+    AFTER completing the checklist, consider output efficiency:
+    
+    - If a similar file exists with MINOR or MODERATE changes needed:
+      - Use edit_python_file() to make targeted changes
+      - This is usually more efficient for small to medium changes
+      
+    - When it's MORE EFFICIENT to create a new file:
+      - If changes would require replacing almost the entire file
+      - If explaining the edits would require more tokens than a new file
+      - If creating a brand new file results in a cleaner, smaller response
+      
+    Remember: The goal is to minimize token usage while maintaining context.
+    Choose the approach that results in the smallest, most efficient output.
     
     This function executes standard Python code with access to imported modules and packages.
     The code is saved to a named file in the session directory and executed in a subprocess 

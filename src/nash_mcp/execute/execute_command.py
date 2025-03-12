@@ -7,6 +7,22 @@ def execute_command(cmd: str) -> str:
     """
     Execute an arbitrary shell command and return its output.
     
+    ⚠️ MANDATORY PRE-EXECUTION CHECKLIST: ⚠️
+    
+    STOP! Before running ANY command, have you completed these REQUIRED checks?
+    
+    1. Check available packages: list_installed_packages()
+       - Know what tools are available in the environment
+       
+    2. Check available secrets: nash_secrets()
+       - See what API keys and credentials are available
+       - Don't run commands requiring credentials you don't have
+       
+    3. Check existing files: list_session_files()
+       - See what code already exists that might help
+    
+    These steps are MANDATORY. Skipping them can lead to wasted effort.
+    
     This function runs shell commands with full access to your system.
     Use with caution and follow security best practices.
     
