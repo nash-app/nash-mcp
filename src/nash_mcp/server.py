@@ -1,20 +1,21 @@
-import os
 import sys
 import logging
 import traceback
 from datetime import datetime
-from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
 # Nash imports
-from nash_mcp.constants import MAC_LOGS_PATH
+from nash_mcp.constants import MAC_LOGS_PATH, NASH_SESSION_DIR, NASH_SESSION_ID
 
 # Execute
-from nash_mcp.execute import execute_command, execute_python, list_installed_packages
+from nash_mcp.execute import execute_command, execute_python, list_installed_packages, get_file_content, edit_python_file, list_session_files
 
 # Fetch
 from nash_mcp.fetch_webpage import fetch_webpage
+
+# Web Automation
+from nash_mcp.operate_browser import operate_browser
 
 # Secrets
 from nash_mcp.nash_secrets import nash_secrets
@@ -24,9 +25,6 @@ from nash_mcp.nash_tasks import (
     save_nash_task, list_nash_tasks, run_nash_task, delete_nash_task,
     execute_task_script, view_task_details
 )
-
-# Help
-from nash_mcp.nash_help import nash_help
 
 
 def setup_logging():
@@ -61,7 +59,11 @@ try:
     # Set up logging
     setup_logging()
 
-    logging.info("Starting Nash MCP server")
+    logging.info(f"Starting Nash MCP server with session ID: {NASH_SESSION_ID}")
+
+    # Create session directory
+    NASH_SESSION_DIR.mkdir(parents=True, exist_ok=True)
+    logging.info(f"Created session directory: {NASH_SESSION_DIR}")
 
     # Create MCP instance
     mcp = FastMCP("Nash")
@@ -72,10 +74,16 @@ try:
     # Execute
     mcp.add_tool(execute_command)
     mcp.add_tool(execute_python)
+    mcp.add_tool(list_session_files)
+    mcp.add_tool(get_file_content)
+    mcp.add_tool(edit_python_file)
     mcp.add_tool(list_installed_packages)
 
     # Fetch
     mcp.add_tool(fetch_webpage)
+    
+    # Web Automation
+    mcp.add_tool(operate_browser)
 
     # Secrets
     mcp.add_tool(nash_secrets)
@@ -87,9 +95,6 @@ try:
     mcp.add_tool(delete_nash_task)
     mcp.add_tool(execute_task_script)
     mcp.add_tool(view_task_details)
-
-    # Help
-    mcp.add_tool(nash_help)
 
     # Start the server
     logging.info("All tools registered, starting MCP server")
