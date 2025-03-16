@@ -59,7 +59,7 @@ This is the command to use for MCP config files
 /path/to/this/repo/.venv/bin/mcp run /path/to/this/repo/src/nash_mcp/server.py
 ```
 
-As an example, if you were to use this MCP with Claud Desktop, you would change your `~/Library/Application Support/Claude/claude_desktop_config.json` to:
+As an example, if you were to use this MCP with Claude Desktop, you would change your `~/Library/Application Support/Claude/claude_desktop_config.json` to:
 
 ```json
 {
