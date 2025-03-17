@@ -22,7 +22,7 @@ def fetch_webpage(url: str) -> str:
     1. Call fetch_webpage with a complete URL (including https://)
     2. Process the returned text directly or with execute_python()
     3. For complex HTML parsing needs, use execute_python() with BeautifulSoup after this
-    
+
     NOTE: For sites that load content dynamically with JavaScript after initial page load,
     or for interactive websites requiring form filling, button clicking, or navigation,
     use the operate_browser tool instead, which provides full browser automation capabilities.
@@ -53,14 +53,14 @@ def fetch_webpage(url: str) -> str:
         response = requests.get(url)
         response.raise_for_status()
         logging.info(f"Successfully retrieved content from {url} (status code: {response.status_code})")
-        
+
         h = html2text.HTML2Text()
         h.ignore_links = True
         h.ignore_images = True
-        
+
         converted_text = h.handle(response.text)
         logging.info(f"Successfully converted HTML to text (content length: {len(converted_text)} chars)")
-        
+
         return converted_text
     except requests.exceptions.HTTPError as e:
         logging.error(f"HTTP error while fetching {url}: {str(e)}")

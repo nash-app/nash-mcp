@@ -43,8 +43,7 @@ def list_installed_packages() -> str:
         python_version = sys.version
 
         # Get list of installed packages
-        installed_packages = sorted([f"{pkg.key}=={pkg.version}" 
-                                    for pkg in pkg_resources.working_set])
+        installed_packages = sorted([f"{pkg.key}=={pkg.version}" for pkg in pkg_resources.working_set])
 
         # Format the output
         output = f"Python version: {python_version}\n\n"

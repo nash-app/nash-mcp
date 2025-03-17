@@ -11,11 +11,7 @@ from browser_use import Agent, Browser, BrowserConfig
 from langchain_anthropic import ChatAnthropic
 
 # Configure logging to stderr
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    stream=sys.stderr
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", stream=sys.stderr)
 
 # Configure browser_use logging
 browser_use_logger = logging.getLogger("browser_use")
@@ -26,6 +22,7 @@ load_dotenv()
 
 # Global variable to track browser instance for cleanup
 _browser_instance = None
+
 
 # Make sure to clean up browser on exit
 def cleanup_browser():
@@ -41,16 +38,20 @@ def cleanup_browser():
             new_loop.run_until_complete(_browser_instance.close())
             new_loop.close()
 
+
 # Register cleanup handler
 atexit.register(cleanup_browser)
+
 
 # Handle termination signals
 def signal_handler(sig, frame):
     logging.info(f"Received signal {sig}, cleaning up and exiting")
     sys.exit(0)
 
+
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
+
 
 async def run_browser_agent(task):
     """Run the browser-use agent with the given task."""
@@ -58,56 +59,52 @@ async def run_browser_agent(task):
     secrets_path = os.environ.get("NASH_SECRETS_PATH")
     if secrets_path and os.path.exists(secrets_path):
         try:
-            with open(secrets_path, 'r') as f:
+            with open(secrets_path, "r") as f:
                 secrets = json.load(f)
-                
+
             # Add secrets to environment variables
             for secret in secrets:
-                if 'key' in secret and 'value' in secret:
-                    os.environ[secret['key']] = secret['value']
-                    
+                if "key" in secret and "value" in secret:
+                    os.environ[secret["key"]] = secret["value"]
+
             logging.info(f"Loaded secrets from {secrets_path}")
         except Exception as e:
             logging.error(f"Error loading secrets: {str(e)}")
     else:
         logging.warning(f"Secrets path not found or invalid: {secrets_path}")
-    
+
     # Get API key from environment (now including any loaded secrets)
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         print(json.dumps({"error": "ANTHROPIC_API_KEY not found in environment variables"}))
         return
-    
+
     try:
         # Initialize LLM
-        llm = ChatAnthropic(
-            model="claude-3-opus-20240229",
-            anthropic_api_key=api_key,
-            temperature=0
-        )
+        llm = ChatAnthropic(model="claude-3-opus-20240229", anthropic_api_key=api_key, temperature=0)
         logging.info("LLM initialized successfully")
-        
+
         # Check if Chrome is installed (macOS only since repo specified this is only for macOS)
-        chrome_path = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-        
+        chrome_path = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+
         if not os.path.exists(chrome_path):
             error_msg = "Google Chrome is not installed. Please install Chrome to use the browser automation feature."
             logging.error(f"Chrome not found at {chrome_path}")
             print(json.dumps({"error": error_msg}))
             return
-            
+
         # Configure browser to use user's Chrome installation
         browser = Browser(
             config=BrowserConfig(
                 chrome_instance_path=chrome_path,
             )
         )
-        
+
         # Store browser in global variable for cleanup
         global _browser_instance
         _browser_instance = browser
         logging.info("Set browser instance for global cleanup tracking")
-        
+
         # Create the agent with configured browser
         agent = Agent(
             task=task,
@@ -115,18 +112,18 @@ async def run_browser_agent(task):
             browser=browser,
         )
         logging.info("Agent created successfully with user's Chrome installation")
-        
+
         try:
             # Run the agent with a browser wrapper to ensure closing
             result = await agent.run()
             logging.info("Agent completed task successfully")
-            
+
             # Extract and return the result
-            if hasattr(result, 'final_result'):
+            if hasattr(result, "final_result"):
                 final_result = result.final_result()
             else:
                 final_result = str(result)
-                
+
             # Return the result as JSON to stdout
             print(json.dumps({"result": final_result}))
         finally:
@@ -139,7 +136,7 @@ async def run_browser_agent(task):
                 # Force exit to ensure browser process is terminated
                 print(json.dumps({"result": "Task completed but had trouble closing the browser cleanly."}))
                 # Not calling sys.exit() here as we want controlled shutdown
-        
+
     except Exception as e:
         logging.error(f"Error during browser automation: {str(e)}")
         print(json.dumps({"error": str(e)}))
@@ -150,10 +147,10 @@ def main():
     if len(sys.argv) < 2:
         print(json.dumps({"error": "No task provided. Usage: python browser_agent.py 'Your task description'"}))
         sys.exit(1)
-        
+
     # Get the task from command line arguments
     task = sys.argv[1]
-    
+
     # Run the agent
     try:
         asyncio.run(run_browser_agent(task))
