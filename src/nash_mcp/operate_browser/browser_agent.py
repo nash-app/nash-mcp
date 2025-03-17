@@ -9,6 +9,7 @@ import atexit
 from dotenv import load_dotenv
 from browser_use import Agent, Browser, BrowserConfig
 from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 
 # Configure logging to stderr
 logging.basicConfig(
@@ -72,20 +73,50 @@ async def run_browser_agent(task):
     else:
         logging.warning(f"Secrets path not found or invalid: {secrets_path}")
     
-    # Get API key from environment (now including any loaded secrets)
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    # Get API key from JSON file at NASH_MODELS_PATH
+    models_path = os.environ.get("NASH_MODELS_PATH")
+    if not models_path:
+        print(json.dumps({"error": "NASH_MODELS_PATH not found in environment variables"}))
+        return
+    
+    api_key_path = f"{models_path}.json"
+    try:
+        with open(api_key_path, 'r') as f:
+            api_key_data = json.load(f)
+            # Find entries for both providers
+            anthropic_keys = [item["value"] for item in api_key_data if item.get("provider") == "anthropic"]
+            openai_keys = [item["value"] for item in api_key_data if item.get("provider") == "openai"]
+            
+            # Determine which provider to use and set appropriate model
+            if anthropic_keys:
+                api_key = anthropic_keys[0]
+                model_name = "claude-3-7-sonnet-latest"
+                llm_class = ChatAnthropic
+                api_key_param = "anthropic_api_key"
+            elif openai_keys:
+                api_key = openai_keys[0]
+                model_name = "o3-mini"
+                llm_class = ChatOpenAI
+                api_key_param = "openai_api_key"
+            else:
+                print(json.dumps({"error": "No supported API keys found in JSON file (needs OpenAI or Anthropic)"}))
+                return
+    except Exception as e:
+        print(json.dumps({"error": f"Failed to read API key from {api_key_path}: {str(e)}"}))
+        return
+    
     if not api_key:
-        print(json.dumps({"error": "ANTHROPIC_API_KEY not found in environment variables"}))
+        print(json.dumps({"error": "No API key found in JSON file"}))
         return
     
     try:
         # Initialize LLM
-        llm = ChatAnthropic(
-            model="claude-3-opus-20240229",
-            anthropic_api_key=api_key,
+        llm = llm_class(
+            model=model_name,
+            **{api_key_param: api_key},
             temperature=0
         )
-        logging.info("LLM initialized successfully")
+        logging.info(f"LLM initialized successfully with {model_name}")
         
         # Check if Chrome is installed (macOS only since repo specified this is only for macOS)
         chrome_path = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
