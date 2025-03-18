@@ -131,6 +131,11 @@ async def run_browser_agent(task):
         browser = Browser(
             config=BrowserConfig(
                 chrome_instance_path=chrome_path,
+                extra_chromium_args=[
+                    "--user-data-dir=/tmp/chrome-temp",  # Use temporary profile directory
+                    "--profile-directory=Guest",  # Use Guest profile
+                    "--disable-extensions"  # Disable all extensions
+                ]
             )
         )
         
