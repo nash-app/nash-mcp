@@ -174,3 +174,4 @@ models.json
 secrets.json
 tasks/*
 logs/*
+sessions/*
