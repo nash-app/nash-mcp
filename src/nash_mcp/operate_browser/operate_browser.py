@@ -68,14 +68,12 @@ def operate_browser(task: str) -> str:
         logging.info(f"Running browser automation task in subprocess: {task}")
 
         # Run the browser_agent.py script as a subprocess
-        # Using start_new_session=True to ensure the browser process group is properly terminated
         result = subprocess.run(
             [sys.executable, str(script_path), task],
             env=os.environ.copy(),  # Copy current environment
             capture_output=True,
             text=True,
-            timeout=300,  # 5 minute timeout
-            start_new_session=True,  # Run in a new process group for clean termination
+            timeout=300  # 5 minute timeout
         )
 
         # Process the output

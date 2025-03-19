@@ -66,14 +66,12 @@ def execute_command(cmd: str) -> str:
 
     try:
         # Always use shell=True for simplicity and tilde expansion
-        # Use preexec_fn=os.setpgrp to make this process the group leader
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            shell=True,
-            preexec_fn=os.setpgrp,  # Make this process the group leader
+            shell=True
         )
 
         # Track the process in the process manager

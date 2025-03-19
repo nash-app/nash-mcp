@@ -500,8 +500,7 @@ def execute_python(code: str, file_name: str) -> str:
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
-                    env=env_vars,
-                    preexec_fn=os.setpgrp,  # Make this process the group leader
+                    env=env_vars
                 )
 
                 # Log process information

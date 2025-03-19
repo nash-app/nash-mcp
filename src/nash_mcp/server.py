@@ -2,6 +2,8 @@ import sys
 import logging
 import traceback
 import os
+import atexit
+import signal
 
 from contextlib import asynccontextmanager
 from typing import AsyncIterator, Dict, Any
@@ -43,30 +45,23 @@ from nash_mcp.nash_tasks import (
 )
 
 
-@asynccontextmanager
-async def nash_lifespan(server: FastMCP) -> AsyncIterator[Dict[str, Any]]:
-    """
-    Manage application lifecycle and process cleanup.
+# Global process manager reference 
+_process_manager = None
 
-    This context manager ensures all child processes are properly cleaned up
-    when the server shuts down, regardless of how termination occurs.
-    """
-    # Initialize the process manager
-    process_manager = ProcessManager.initialize(NASH_SESSION_DIR)
 
-    context = {"server_pid": os.getpid(), "process_manager": process_manager}
+# Cleanup handler for atexit and signals
+def cleanup_handler(*args):
+    """Clean up processes when exiting."""
+    logging.info("Running process cleanup")
+    
+    if _process_manager:
+        _process_manager.cleanup()
+    else:
+        logging.warning("No process manager available for cleanup")
 
-    logging.info(f"Server starting with PID {context['server_pid']}")
 
-    try:
-        yield context
-    finally:
-        # Clean up happens here when the server is shutting down
-        process_manager = context["process_manager"]
-
-        # Comprehensive cleanup using our new process manager
-        process_manager.cleanup(session_base_path=str(MAC_SESSIONS_PATH))
-
+# Register the handler for both atexit and signals
+atexit.register(cleanup_handler)
 
 # Main MCP server setup and execution
 try:
@@ -79,8 +74,15 @@ try:
     NASH_SESSION_DIR.mkdir(parents=True, exist_ok=True)
     logging.info(f"Created session directory: {NASH_SESSION_DIR}")
 
+    # Initialize process manager and save global reference
+    _process_manager = ProcessManager.initialize(NASH_SESSION_DIR)
+    
+    # Register signal handlers
+    signal.signal(signal.SIGTERM, cleanup_handler)
+    signal.signal(signal.SIGINT, cleanup_handler)
+
     # Create MCP instance with lifespan management
-    mcp = FastMCP("Nash", lifespan=nash_lifespan)
+    mcp = FastMCP("Nash")
 
     # Register tools
     logging.info("Registering MCP tools")
