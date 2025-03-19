@@ -4,39 +4,9 @@ import subprocess
 import sys
 import traceback
 import logging
-import signal
-import atexit
-from datetime import datetime
-
-# Store active subprocesses
-active_python_processes = []
-
-
-# Cleanup function
-def cleanup_python_subprocesses():
-    for proc in active_python_processes:
-        try:
-            if proc.poll() is None:  # If process is still running
-                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-        except Exception:
-            pass
-
-
-# Register cleanup on exit
-atexit.register(cleanup_python_subprocesses)
-
-
-# For signal handling
-def python_signal_handler(sig, frame):
-    cleanup_python_subprocesses()
-    sys.exit(0)
-
-
-# Register signal handlers
-signal.signal(signal.SIGINT, python_signal_handler)
-signal.signal(signal.SIGTERM, python_signal_handler)
 
 from nash_mcp.constants import MAC_SECRETS_PATH, NASH_SESSION_DIR
+from nash_mcp.process_manager import ProcessManager
 
 
 def list_session_files() -> str:
@@ -524,7 +494,7 @@ def execute_python(code: str, file_name: str) -> str:
                 # Log the command being executed
                 cmd_args = [sys.executable, str(file_path)]
                 logging.info(f"Launching subprocess with command: {' '.join(cmd_args)}")
-                
+
                 proc = subprocess.Popen(
                     cmd_args,
                     stdout=subprocess.PIPE,
@@ -533,91 +503,28 @@ def execute_python(code: str, file_name: str) -> str:
                     env=env_vars,
                     preexec_fn=os.setpgrp,  # Make this process the group leader
                 )
-                
+
                 # Log process information
                 proc_pid = proc.pid
                 logging.info(f"Created subprocess with PID {proc_pid} for file {file_path}")
-                
-                # Add to active processes list for cleanup
-                active_python_processes.append(proc)
-                
-                # DIRECT ADD TO TRACKING FILE - Bypass all abstractions
-                tracking_file = NASH_SESSION_DIR / "tracked_pids.txt"
-                
-                try:
-                    # Ensure file exists
-                    if not tracking_file.exists():
-                        with open(tracking_file, 'w') as f:
-                            f.write("")
-                    
-                    # Read existing content
-                    with open(tracking_file, 'r') as f:
-                        content = f.read().strip()
-                    
-                    # Parse existing PIDs or create empty set
-                    pids = set()
-                    if content:
-                        pids = set(int(p.strip()) for p in content.split(',') if p.strip())
-                    
-                    # Add new PID
-                    pids.add(proc_pid)
-                    
-                    # Write back to file
-                    with open(tracking_file, 'w') as f:
-                        f.write(','.join(str(p) for p in pids))
-                    
-                    print(f"EMERGENCY: DIRECTLY ADDED PID {proc_pid} TO TRACKING FILE: {tracking_file}")
-                    print(f"EMERGENCY: TRACKED PIDS: {','.join(str(p) for p in pids)}")
-                except Exception as e:
-                    # Log any errors
-                    print(f"EMERGENCY: FAILED TO ADD PID TO TRACKING FILE: {e}")
-                    
-                # Still try the module function as well
-                try:
-                    import nash_mcp.constants
-                    nash_mcp.constants.add_pid(proc_pid)
-                except Exception as e:
-                    print(f"EMERGENCY: FAILED TO ADD PID VIA MODULE FUNCTION: {e}")
-                
-                logging.info(f"Added PID {proc_pid} to active_python_processes tracking list (length: {len(active_python_processes)})")
-                logging.info(f"Added PID {proc_pid} to global process tracker")
-                
-                # Log all active processes for debugging
-                if logging.getLogger().level <= logging.INFO:
-                    logging.info("Currently tracked Python processes:")
-                    for p in active_python_processes:
-                        pid = p.pid if hasattr(p, 'pid') else 'unknown'
-                        is_running = p.poll() is None if hasattr(p, 'poll') else 'unknown'
-                        logging.info(f"  - PID: {pid}, Still running: {is_running}")
-                
+
+                # Track the process in the process manager
+                process_manager = ProcessManager.get_instance()
+                process_manager.add_pid(proc_pid)
+
                 try:
                     logging.info(f"Waiting for process {proc_pid} to complete...")
                     stdout, stderr = proc.communicate()
                     logging.info(f"Process {proc_pid} completed with return code {proc.returncode}")
                     result = subprocess.CompletedProcess(
-                        [sys.executable, str(file_path)],
-                        proc.returncode,
-                        stdout,
-                        stderr
+                        [sys.executable, str(file_path)], proc.returncode, stdout, stderr
                     )
                 finally:
-                    # Remove from active processes list
-                    if proc in active_python_processes:
-                        active_python_processes.remove(proc)
-                        logging.info(f"Removed PID {proc_pid} from active_python_processes tracking list (length: {len(active_python_processes)})")
+                    # Remove from the process manager if completed successfully
+                    if hasattr(proc, "returncode") and proc.returncode == 0:
+                        process_manager.remove_pid(proc_pid)
                     else:
-                        logging.warning(f"Process {proc_pid} not found in active_python_processes when trying to remove it")
-                        
-                    # IMPORTANT: Only remove from the global tracker if the process completed successfully
-                    # Don't remove if it's a long-running process that was detached (intentionally)
-                    # We'll still want to kill it during server shutdown
-                    if proc.returncode == 0:
-                        # Use the same pattern as for adding
-                        import nash_mcp.constants
-                        nash_mcp.constants.remove_pid(proc_pid)
-                        logging.info(f"Removed PID {proc_pid} from global process tracker (completed successfully)")
-                    else:
-                        logging.info(f"Keeping PID {proc_pid} in global process tracker (non-zero return code: {proc.returncode})")
+                        logging.info(f"Keeping PID {proc_pid} in process manager (non-zero or unknown return code)")
 
                 # Return stdout if successful, or stderr if there was an error
                 if result.returncode == 0:
@@ -625,46 +532,13 @@ def execute_python(code: str, file_name: str) -> str:
                     return result.stdout if result.stdout else f"Code in {file_name} executed successfully (no output)"
                 else:
                     logging.warning(f"Python code execution of {file_name} failed with return code {result.returncode}")
-
-                    # Save error information to companion file
-                    try:
-                        error_file = file_path.with_suffix(".error")
-                        with open(error_file, "w") as f:
-                            f.write(result.stderr)
-                        logging.info(f"Saved error output to: {error_file}")
-                    except Exception as write_err:
-                        logging.error(f"Failed to write error file: {str(write_err)}")
-
                     return f"Error in {file_name} (return code {result.returncode}):\n{result.stderr}"
 
-            except subprocess.SubprocessError as sub_err:
-                # Specifically handle subprocess errors
-                error_msg = f"Subprocess error executing {file_name}: {str(sub_err)}"
-                logging.error(error_msg)
-
-                try:
-                    exception_file = file_path.with_suffix(".exception")
-                    with open(exception_file, "w") as f:
-                        f.write(f"SubprocessError: {str(sub_err)}\nTraceback: {traceback.format_exc()}")
-                    logging.info(f"Saved exception information to: {exception_file}")
-                except Exception:
-                    logging.error("Failed to write exception file")
-
-                return error_msg
-
             except Exception as exec_err:
-                # Handle other exceptions during execution
+                # Handle any execution exceptions
                 error_msg = f"Error executing {file_name}: {str(exec_err)}"
                 logging.error(error_msg)
                 logging.error(traceback.format_exc())
-
-                try:
-                    exception_file = file_path.with_suffix(".exception")
-                    with open(exception_file, "w") as f:
-                        f.write(f"Error: {str(exec_err)}\nTraceback: {traceback.format_exc()}")
-                    logging.info(f"Saved exception information to: {exception_file}")
-                except Exception:
-                    logging.error("Failed to write exception file")
 
                 return error_msg
 
@@ -672,15 +546,6 @@ def execute_python(code: str, file_name: str) -> str:
             # Catch-all for any other exceptions in the outer try block
             logging.error(f"Unexpected error in execute_python for {file_name}: {str(e)}")
             logging.error(traceback.format_exc())
-
-            try:
-                if "file_path" in locals():
-                    exception_file = file_path.with_suffix(".exception")
-                    with open(exception_file, "w") as f:
-                        f.write(f"Unexpected error: {str(e)}\nTraceback: {traceback.format_exc()}")
-                    logging.info(f"Saved exception information to: {exception_file}")
-            except Exception:
-                logging.error("Failed to write exception file")
 
             # Return error message instead of raising to prevent MCP server crash
             return f"Unexpected error in {file_name}: {str(e)}\nSee logs for details."

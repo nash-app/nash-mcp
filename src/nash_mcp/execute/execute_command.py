@@ -2,40 +2,11 @@ import subprocess
 import traceback
 import logging
 import os
-import signal
-import sys
-import atexit
 
 # Import Nash constants
-from nash_mcp.constants import NASH_SESSION_DIR
+from nash_mcp.process_manager import ProcessManager
 
-# Store active subprocesses
-active_processes = []
-
-
-# Cleanup function
-def cleanup_subprocesses():
-    for proc in active_processes:
-        try:
-            if proc.poll() is None:  # If process is still running
-                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-        except Exception:
-            pass
-
-
-# Register cleanup on exit
-atexit.register(cleanup_subprocesses)
-
-
-# For signal handling
-def signal_handler(sig, frame):
-    cleanup_subprocesses()
-    sys.exit(0)
-
-
-# Register signal handlers
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
+# Process management is now handled by ProcessManager
 
 
 def execute_command(cmd: str) -> str:
@@ -91,35 +62,7 @@ def execute_command(cmd: str) -> str:
         Detailed error information with exit code and stderr if command fails
         Exception details with traceback if execution fails
     """
-    # Log the full command but still sanitize potentially sensitive parts for security
-    # Split the command on spaces to identify likely arguments
-    cmd_parts = cmd.split()
-
-    # For logging, replace potentially sensitive arguments (after flags)
-    # This is a simple sanitization that focuses on common sensitivity patterns
-    safe_parts = []
-    for i, part in enumerate(cmd_parts):
-        # Check for sensitive patterns
-        # If it might be a sensitive argument (like an API key or password) after a flag
-        if (
-            i > 0
-            and cmd_parts[i - 1].startswith("-")
-            and (
-                "key" in cmd_parts[i - 1].lower()
-                or "token" in cmd_parts[i - 1].lower()
-                or "pass" in cmd_parts[i - 1].lower()
-                or "secret" in cmd_parts[i - 1].lower()
-            )
-        ):
-            # Replace with [REDACTED] to avoid logging sensitive info
-            safe_parts.append("[REDACTED]")
-        # Otherwise keep the original part
-        else:
-            safe_parts.append(part)
-
-    safe_cmd = " ".join(safe_parts)
-    # Log the full command (but with sensitive parts redacted)
-    logging.info(f"Executing command: {safe_cmd}")
+    logging.info(f"Executing command: {cmd}")
 
     try:
         # Always use shell=True for simplicity and tilde expansion
@@ -133,48 +76,10 @@ def execute_command(cmd: str) -> str:
             preexec_fn=os.setpgrp,  # Make this process the group leader
         )
 
-        # Add to active processes list for cleanup
-        active_processes.append(proc)
-        
-        # DIRECT ADD TO TRACKING FILE - Bypass all abstractions
+        # Track the process in the process manager
         proc_pid = proc.pid
-        tracking_file = NASH_SESSION_DIR / "tracked_pids.txt"
-        
-        try:
-            # Ensure file exists
-            if not tracking_file.exists():
-                with open(tracking_file, 'w') as f:
-                    f.write("")
-            
-            # Read existing content
-            with open(tracking_file, 'r') as f:
-                content = f.read().strip()
-            
-            # Parse existing PIDs or create empty set
-            pids = set()
-            if content:
-                pids = set(int(p.strip()) for p in content.split(',') if p.strip())
-            
-            # Add new PID
-            pids.add(proc_pid)
-            
-            # Write back to file
-            with open(tracking_file, 'w') as f:
-                f.write(','.join(str(p) for p in pids))
-            
-            print(f"EMERGENCY: DIRECTLY ADDED PID {proc_pid} TO TRACKING FILE: {tracking_file}")
-            print(f"EMERGENCY: TRACKED PIDS: {','.join(str(p) for p in pids)}")
-        except Exception as e:
-            # Log any errors
-            print(f"EMERGENCY: FAILED TO ADD PID TO TRACKING FILE: {e}")
-            
-        # Still try the module function as well
-        try:
-            import nash_mcp.constants
-            nash_mcp.constants.add_pid(proc_pid)
-        except Exception as e:
-            print(f"EMERGENCY: FAILED TO ADD PID VIA MODULE FUNCTION: {e}")
-        logging.info(f"Added PID {proc_pid} to global process tracker")
+        process_manager = ProcessManager.get_instance()
+        process_manager.add_pid(proc_pid)
 
         try:
             stdout, stderr = proc.communicate()
@@ -182,24 +87,19 @@ def execute_command(cmd: str) -> str:
                 logging.info(f"Command executed successfully (exit code 0)")
                 return stdout if stdout.strip() else "Command executed (no output)."
             else:
-                logging.warning(f"Command failed with exit code {proc.returncode}: {safe_cmd}")
+                logging.warning(f"Command failed with exit code {proc.returncode}: {cmd}")
                 logging.debug(f"Command stderr: {stderr}")
                 return f"Command failed (exit code {proc.returncode}).\n" f"STDOUT:\n{stdout}\nSTDERR:\n{stderr}"
         finally:
-            # Remove from active processes list
-            if proc in active_processes:
-                active_processes.remove(proc)
-                
-            # IMPORTANT: Only remove from the global tracker if the process completed successfully
+            # Process cleanup will happen via ProcessManager
+
+            # IMPORTANT: Only remove from the process manager if the process completed successfully
             # Don't remove if it's a long-running process that was detached (intentionally)
             # We'll still want to kill it during server shutdown
-            if hasattr(proc, 'returncode') and proc.returncode == 0:
-                # Use the same pattern as for adding
-                import nash_mcp.constants
-                nash_mcp.constants.remove_pid(proc_pid)
-                logging.info(f"Removed PID {proc_pid} from global process tracker (completed successfully)")
+            if hasattr(proc, "returncode") and proc.returncode == 0:
+                process_manager.remove_pid(proc_pid)
             else:
-                logging.info(f"Keeping PID {proc_pid} in global process tracker (non-zero or unknown return code)")
+                logging.info(f"Keeping PID {proc_pid} in process manager (non-zero or unknown return code)")
     except Exception as e:
         logging.error(f"Exception while executing command: {str(e)}")
         logging.error(traceback.format_exc())
