@@ -3,7 +3,7 @@ import signal
 import logging
 import psutil
 from pathlib import Path
-from typing import List, Set, Optional
+from typing import List, Optional
 
 
 class ProcessManager:
@@ -39,10 +39,10 @@ class ProcessManager:
         """
         self.session_dir = session_dir
         self.server_pid = os.getpid()
-        
+
         # In-memory tracking of process IDs
         self.tracked_pids = set()
-        
+
         logging.info(f"ProcessManager initialized with in-memory tracking")
         logging.info(f"Server PID: {self.server_pid}")
 
@@ -116,22 +116,23 @@ class ProcessManager:
             # Simple, direct process termination - first with SIGTERM
             os.kill(pid, signal.SIGTERM)
             logging.info(f"Sent SIGTERM directly to PID {pid}")
-            
+
             # Give it a moment to terminate
             import time
+
             time.sleep(0.5)
-            
+
             # Check if it's still running
             if psutil.pid_exists(pid):
                 # Process is still alive, send SIGKILL
                 os.kill(pid, signal.SIGKILL)
                 logging.info(f"Sent SIGKILL directly to PID {pid}")
-                
+
         except ProcessLookupError:
             logging.info(f"Process {pid} not found")
         except Exception as e:
             logging.error(f"Error terminating process {pid}: {e}")
-        
+
         # Always remove the PID from tracking
         self.remove_pid(pid)
 
@@ -149,7 +150,7 @@ class ProcessManager:
     def cleanup(self) -> None:
         """
         Cleanup all tracked processes.
-        
+
         This method terminates all tracked processes.
         It should be called during server shutdown.
         """

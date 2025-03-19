@@ -66,13 +66,7 @@ def execute_command(cmd: str) -> str:
 
     try:
         # Always use shell=True for simplicity and tilde expansion
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            shell=True
-        )
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
 
         # Track the process in the process manager
         proc_pid = proc.pid

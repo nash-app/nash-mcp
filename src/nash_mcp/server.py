@@ -1,17 +1,13 @@
 import sys
 import logging
 import traceback
-import os
 import atexit
 import signal
-
-from contextlib import asynccontextmanager
-from typing import AsyncIterator, Dict, Any
 
 from mcp.server.fastmcp import FastMCP
 
 # Nash imports
-from nash_mcp.constants import NASH_SESSION_DIR, NASH_SESSION_ID, MAC_SESSIONS_PATH
+from nash_mcp.constants import NASH_SESSION_DIR, NASH_SESSION_ID
 from nash_mcp.logging import setup_logging
 from nash_mcp.process_manager import ProcessManager
 
@@ -45,7 +41,7 @@ from nash_mcp.nash_tasks import (
 )
 
 
-# Global process manager reference 
+# Global process manager reference
 _process_manager = None
 
 
@@ -53,7 +49,7 @@ _process_manager = None
 def cleanup_handler(*args):
     """Clean up processes when exiting."""
     logging.info("Running process cleanup")
-    
+
     if _process_manager:
         _process_manager.cleanup()
     else:
@@ -76,7 +72,7 @@ try:
 
     # Initialize process manager and save global reference
     _process_manager = ProcessManager.initialize(NASH_SESSION_DIR)
-    
+
     # Register signal handlers
     signal.signal(signal.SIGTERM, cleanup_handler)
     signal.signal(signal.SIGINT, cleanup_handler)
@@ -114,7 +110,7 @@ try:
 
     # Start the server
     logging.info("All tools registered, starting MCP server")
-    mcp.run()
+    # mcp.run()
 
 except Exception as e:
     logging.critical(f"Fatal error in Nash MCP server: {str(e)}")

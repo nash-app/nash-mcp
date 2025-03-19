@@ -73,7 +73,7 @@ def operate_browser(task: str) -> str:
             env=os.environ.copy(),  # Copy current environment
             capture_output=True,
             text=True,
-            timeout=300  # 5 minute timeout
+            timeout=300,  # 5 minute timeout
         )
 
         # Process the output

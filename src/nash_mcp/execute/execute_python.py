@@ -496,11 +496,7 @@ def execute_python(code: str, file_name: str) -> str:
                 logging.info(f"Launching subprocess with command: {' '.join(cmd_args)}")
 
                 proc = subprocess.Popen(
-                    cmd_args,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    env=env_vars
+                    cmd_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env_vars
                 )
 
                 # Log process information
