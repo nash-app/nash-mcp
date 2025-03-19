@@ -6,7 +6,7 @@ from nash_mcp.constants import MAC_SECRETS_PATH
 def nash_secrets() -> str:
     """List all available API keys and credentials that can be used in your code.
 
-    ALWAYS CHECK FOR AVAILABLE SECRETS FIRST before requesting API keys from users 
+    ALWAYS CHECK FOR AVAILABLE SECRETS FIRST before requesting API keys from users
     or hardcoding credentials in your code. This tool provides safe access to the user's
     stored credentials while protecting their actual values.
 
@@ -24,7 +24,7 @@ def nash_secrets() -> str:
        if api_key:
            # Use the API key safely
            print(f"Using API key: {api_key[:4]}...")  # Only show first few chars
-           
+
            # Use with API clients
            # client = SomeApiClient(api_key=api_key)
        else:
@@ -37,7 +37,7 @@ def nash_secrets() -> str:
     - Don't transmit secrets to external services not related to their purpose
     - Always handle the case where a secret might not exist
     - Don't modify or delete the secrets file
-    
+
     IMPLEMENTATION DETAILS:
     - Each secret has a 'key' and 'description' field
     - Only key names and descriptions are returned, not actual values
@@ -52,7 +52,7 @@ def nash_secrets() -> str:
         if not MAC_SECRETS_PATH.exists():
             return "No secrets file found."
 
-        with open(MAC_SECRETS_PATH, 'r') as f:
+        with open(MAC_SECRETS_PATH, "r") as f:
             secrets = json.load(f)
 
         if not secrets:
@@ -60,8 +60,8 @@ def nash_secrets() -> str:
 
         result = "Available secrets:\n\n"
         for secret in secrets:
-            key = secret.get('key', 'N/A')
-            desc = secret.get('description', 'No description')
+            key = secret.get("key", "N/A")
+            desc = secret.get("description", "No description")
             result += f"Key: {key}\n"
             result += f"Description: {desc}\n\n"
 
