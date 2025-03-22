@@ -80,9 +80,8 @@ async def run_browser_agent(task):
         print(json.dumps({"error": "NASH_MODELS_PATH not found in environment variables"}))
         return
     
-    api_key_path = f"{models_path}.json"
     try:
-        with open(api_key_path, 'r') as f:
+        with open(models_path, 'r') as f:
             api_key_data = json.load(f)
             # Find entries for both providers
             anthropic_keys = [item["value"] for item in api_key_data if item.get("provider") == "anthropic"]
@@ -103,7 +102,7 @@ async def run_browser_agent(task):
                 print(json.dumps({"error": "No supported API keys found in JSON file (needs OpenAI or Anthropic)"}))
                 return
     except Exception as e:
-        print(json.dumps({"error": f"Failed to read API key from {api_key_path}: {str(e)}"}))
+        print(json.dumps({"error": f"Failed to read API key from {models_path}: {str(e)}"}))
         return
     
     if not api_key:
