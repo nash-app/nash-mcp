@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "nash-mcp"
-version = "0.1.14"
+version = "0.1.15"
 description = "Nash MCP"
 authors = ["Nash Team <team@nash.run>"]
 license = "MIT"
@@ -58,7 +58,7 @@ psd-tools = "^1.10.7"
 pdf2image = "^1.17.0"
 gitpython = "^3.1.44"
 pymongo = "^4.11.2"
-construct = "^2.10.70"
+construct = "==2.10.68"
 pyelftools = "^0.32"
 h5py = "^3.13.0"
 netcdf4 = "^1.7.2"
@@ -74,6 +74,10 @@ langchain-openai = "0.3.1"
 langchain-anthropic = "0.3.3"
 psutil = "^5.9.8"
 mcp = {extras = ["cli"], version = "^1.4.1"}
+web3 = "^7.9.0"
+eth-utils = "^5.2.0"
+solders = "^0.26.0"
+solana = "^0.36.6"
 
 [tool.poetry.scripts]
 nash = "nash_mcp.server:main"
