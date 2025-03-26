@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "nash-mcp"
-version = "0.1.13"
+version = "0.1.14"
 description = "Nash MCP"
 authors = ["Nash Team <team@nash.run>"]
 license = "MIT"
